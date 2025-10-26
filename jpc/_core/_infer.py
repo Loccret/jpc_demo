@@ -116,7 +116,7 @@ def solve_inference(
             stepsize_controller
         ),
         stepsize_controller=stepsize_controller,
-        event=Event(steady_state_event_with_timeout),
+        event=Event(steady_state_event_with_timeout),  # stop when returning from steady_state_event_with_timeout crosses zero
         saveat=saveat
     )
     return solution.ys

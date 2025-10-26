@@ -162,7 +162,7 @@ def make_pc_step(
         loss = cross_entropy_loss(activities[-1], output) if input is not None else None
     else:
         raise ValueError("`mse` and `ce` are the only valid losses.")
-
+    # return expect activities of each layer (lowest energy state)
     equilib_activities = solve_inference(
         params=(model, skip_model),
         activities=activities,
