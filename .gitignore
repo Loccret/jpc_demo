@@ -15,3 +15,5 @@ __pycache__/
 site/
 venv*/
 *.log
+
+/examples/runs/*

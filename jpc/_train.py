@@ -262,6 +262,8 @@ def make_pc_step(
         "activity_norms": activity_norms,
         "model_param_norms": param_norms[0],
         "skip_model_param_norms": param_norms[1],
+        "model_param_grads": param_grads[0],   ## added
+        "skip_model_param_grads": param_grads[1],## added
         "model_grad_norms": grad_norms[0],
         "skip_model_grad_norms": grad_norms[1]
     }
