@@ -17,3 +17,4 @@ venv*/
 *.log
 
 /examples/runs/*
+/aggregate/code/logs/*
