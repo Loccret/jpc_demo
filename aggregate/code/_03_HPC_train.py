@@ -26,7 +26,7 @@ def evaluate(
       test_loader
 ):
     amort_accs, hpc_accs, gen_accs = 0, 0, 0
-    for _, (img_batch, label_batch) in enumerate(test_loader):
+    for _, (img_batch, label_batch) in tqdm(enumerate(test_loader), total=len(test_loader)):
         img_batch, label_batch = img_batch.numpy(), label_batch.numpy()
 
         amort_acc, hpc_acc, gen_acc, img_preds = jpc.test_hpc(
@@ -112,7 +112,7 @@ def train_HPC(
         )
         generator, amortiser = result["generator"], result["amortiser"]
         gen_loss, amort_loss = result["losses"]
-        if ((iter+1) % test_every) == 0:
+        if ((iter+1) % test_every) == 0 or (iter+1) == len(train_loader):
             amort_acc, hpc_acc, gen_acc, label_batch, img_preds = evaluate(
                 key,
                 layer_sizes,

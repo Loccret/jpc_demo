@@ -16,8 +16,12 @@ from tqdm import tqdm
 from _01_utilities import get_mnist_loaders
 from _02_BiPC_train import train_BiPC
 from _03_HPC_train import train_HPC
+from _04_DPC_train import train_DPC
+from _05_muPC_train import train_muPC
+from aggregate.code._06_sv_genPC_train import train_sv_gen_pc
 from typing import Tuple, Dict
 import argparse
+
 import jpc
 
 
@@ -65,8 +69,45 @@ def get_model_config(dataset_type: str) -> Dict:
             'act_fn': "relu",
             'lr': 1e-3,
             'max_t1': 50,
-            'test_every': 100,
+            'test_every': 1000,
             'n_train_iters': 300
+        },
+        "DPC": {
+            'seed': 0,
+            'input_dim': 784,
+            'width': 300,
+            'depth': 3,
+            'output_dim': 10,
+            'act_fn': "relu",
+            'use_bias': True,
+            'lr': 1e-3,
+            'test_every': 200,
+            'n_train_iters': 300
+        },
+        "muPC": {
+            'seed': 4329,
+            'input_dim': 784,
+            'width': 128,
+            'depth': 30,
+            'output_dim': 10,
+            'act_fn': "relu",
+            'param_type': "mupc",
+            'activity_lr': 5e-1,
+            'param_lr': 1e-1,
+            'test_every': 200,
+            'n_train_iters': 900
+        },
+        "sv_gen_pc": {
+            'seed': 0,
+            'input_dim': 10,
+            'width': 300,
+            'depth': 3,
+            'output_dim': 784,
+            'act_fn': "relu",
+            'lr': 1e-3,
+            'max_t1': 100,
+            'test_every': 200,
+            'n_train_iters': 200
         }
     }
     if dataset_type in configs:
@@ -88,19 +129,40 @@ def create_writer(log_dir):
 
 def run_pipeline(dataset_type: str):
     writter = create_writer(log_dir=f'logs/{dataset_type}')
-
+    # print("Training BiPC Model (generative PC...)")
     # train_BiPC(
     #     **get_model_config("BiPC"),
     #     batch_size=get_dataset_config(dataset_type)['batch_size'],
     #     writter=writter
     # )
-    train_HPC(
-        **get_model_config("HPC"),
+
+    # print("Training HPC Model (generative PC...)")
+    # train_HPC(
+    #     **get_model_config("HPC"),
+    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
+    #     writter=writter
+    # )
+
+    print("Training sv_gen_pc Model (generative and discriminative PC...)")
+    train_sv_gen_pc(
+        **get_model_config("sv_gen_pc"),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
         writter=writter
     )
 
+    # print("Training DPC Model (discriminative PC...)")
+    # train_DPC(
+    #     **get_model_config("DPC"),
+    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
+    #     writer=writter
+    # )
 
+    # print("Training muPC Model (multi-scale PC...)")
+    # train_muPC(
+    #     **get_model_config("muPC"),
+    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
+    #     writer=writter
+    # )
 
 
 def main():
