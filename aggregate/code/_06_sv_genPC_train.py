@@ -49,6 +49,8 @@ def train_sv_gen_pc(
     max_t1,
     test_every,
     n_train_iters,
+    train_loader,
+    test_loader,
     writter = None
 ):
     key = jax.random.PRNGKey(seed)
@@ -67,7 +69,7 @@ def train_sv_gen_pc(
     opt_state = optim.init(
         (eqx.filter(network, eqx.is_array), None)
     )
-    train_loader, test_loader = get_mnist_loaders(batch_size)
+    # Use the provided data loaders instead of hard-coded MNIST loaders
 
     for iter, (img_batch, label_batch) in tqdm(enumerate(train_loader), total = len(train_loader)):
         img_batch, label_batch = img_batch.numpy(), label_batch.numpy()

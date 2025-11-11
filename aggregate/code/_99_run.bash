@@ -1,0 +1,1 @@
+python _00_aggregate_test.py --dataset CIFAR10

@@ -228,6 +228,8 @@ def train_muPC(
     batch_size,
     test_every,
     n_train_iters,
+    train_loader,
+    test_loader,
     writer = None
 ):  
     
@@ -274,7 +276,7 @@ def train_muPC(
     param_opt_state = param_optim.init(
         (eqx.filter(model, eqx.is_array), skip_model)
     )
-    train_loader, test_loader = get_mnist_loaders(batch_size)
+    # Use the provided data loaders instead of hard-coded MNIST loaders
 
     for iter, (img_batch, label_batch) in enumerate(train_loader):
         img_batch, label_batch = img_batch.numpy(), label_batch.numpy()

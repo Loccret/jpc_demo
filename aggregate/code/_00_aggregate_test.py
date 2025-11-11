@@ -53,74 +53,93 @@ def load_dataset(dataset_type: str) -> Tuple[DataLoader, DataLoader]:
     else:
         raise ValueError(f"Unsupported dataset type: {dataset_type}")
 
-def get_model_config(model_type: str) -> Dict:
-    configs = {
+def get_data_dimensions(dataset_type: str) -> Tuple[int, int]:
+    """Get input and output dimensions based on dataset type."""
+    data_dims = {
+        "MNIST": (784, 10),  # 28*28 flattened input, 10 classes
+        "CIFAR10": (3072, 10)  # 32*32*3 flattened input, 10 classes
+    }
+    if dataset_type not in data_dims:
+        raise ValueError(f"Unsupported dataset type: {dataset_type}")
+    return data_dims[dataset_type]
+
+
+def get_model_config(model_type: str, dataset_type: str = "MNIST", 
+                    shared_params: Dict = None) -> Dict:
+    """
+    Get model configuration with data-driven dimensions and shared hyperparameters.
+    
+    Args:
+        model_type: Type of model ("BiPC", "HPC", "DPC", "muPC", "sv_gen_pc")
+        dataset_type: Type of dataset ("MNIST", "CIFAR10") 
+        shared_params: Dictionary of shared hyperparameters to override defaults
+    """
+    data_dim, label_dim = get_data_dimensions(dataset_type)
+    
+    # Default shared hyperparameters
+    default_shared = {
+        'seed': 0,
+        'act_fn': "relu",
+        'width': 300,
+        'depth': 3,
+        'test_every': 200,
+        'n_train_iters': 300
+    }
+    
+    # Update with user-provided shared parameters
+    if shared_params:
+        default_shared.update(shared_params)
+    
+    # Model-specific configurations
+    model_specifics = {
         "BiPC": {
-            'seed': 0,
-            'input_dim': 10,
-            'width': 300,
-            'depth': 3,
-            'output_dim': 784,
-            'act_fn': "relu",
+            'input_dim': label_dim,  # latent dimension for generative model
+            'output_dim': data_dim,  # generate data
             'activity_lr': 5e-1,
             'param_lr': 1e-3,
             'test_every': 100,
-            'n_train_iters': 300
         },
         "HPC": {
-            'seed': 0,
-            'input_dim': 10,
-            'width': 300,
-            'depth': 3,
-            'output_dim': 784,
-            'act_fn': "relu",
+            'input_dim': label_dim,  # latent dimension for generative model
+            'output_dim': data_dim,  # generate data
             'lr': 1e-3,
             'max_t1': 50,
             'test_every': 1000,
-            'n_train_iters': 300
         },
         "DPC": {
-            'seed': 0,
-            'input_dim': 784,
-            'width': 300,
-            'depth': 3,
-            'output_dim': 10,
-            'act_fn': "relu",
+            'input_dim': data_dim,  # data input
+            'output_dim': label_dim,  # classify data
             'use_bias': True,
             'lr': 1e-3,
-            'test_every': 200,
-            'n_train_iters': 300
         },
         "muPC": {
-            'seed': 4329,
-            'input_dim': 784,
-            'width': 128,
-            'depth': 30,
-            'output_dim': 10,
-            'act_fn': "relu",
+            'seed': 4329,  # specific seed for reproducibility
+            'input_dim': data_dim,  # data input
+            'output_dim': label_dim,  # classify data
+            'width': 128,  # different width for muPC
+            'depth': 30,   # much deeper for muPC
             'param_type': "mupc",
             'activity_lr': 5e-1,
             'param_lr': 1e-1,
-            'test_every': 200,
-            'n_train_iters': 900
+            'n_train_iters': 900,  # more training iterations
         },
         "sv_gen_pc": {
-            'seed': 0,
-            'input_dim': 10,
-            'width': 300,
-            'depth': 3,
-            'output_dim': 784,
-            'act_fn': "relu",
+            'input_dim': label_dim,  # latent dimension for generative model
+            'output_dim': data_dim,  # generate data
             'lr': 1e-3,
             'max_t1': 100,
-            'test_every': 200,
-            'n_train_iters': 200
+            'n_train_iters': 200,  # fewer training iterations
         }
     }
-    if model_type in configs:
-        return configs[model_type]
-    else:
+    
+    if model_type not in model_specifics:
         raise ValueError(f"Unsupported model type: {model_type}")
+    
+    # Combine shared and model-specific parameters
+    config = default_shared.copy()
+    config.update(model_specifics[model_type])
+    
+    return config
 
 
 def create_writer(log_dir):
@@ -134,49 +153,113 @@ def create_writer(log_dir):
     new_index = last_index + 1
     return SummaryWriter(log_dir=log_dir / f'run_{new_index:03d}')
 
-def run_pipeline(dataset_type: str):
+def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
+    """
+    Run the complete training pipeline for all PC variants.
+    
+    Args:
+        dataset_type: Dataset to use ("MNIST", "CIFAR10")
+        shared_hyperparams: Dictionary of shared hyperparameters to apply to all models
+    """
     writter = create_writer(log_dir=f'logs/{dataset_type}')
+    
+    # Get data loaders for the specified dataset
+    train_loader, test_loader = load_dataset(dataset_type)
+    
     print("Training BiPC Model (generative PC...)")
     train_BiPC(
-        **get_model_config("BiPC"),
+        **get_model_config("BiPC", dataset_type, shared_hyperparams),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
         writter=writter
     )
 
     print("Training HPC Model (generative PC...)")
     train_HPC(
-        **get_model_config("HPC"),
+        **get_model_config("HPC", dataset_type, shared_hyperparams),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
         writter=writter
     )
 
     print("Training sv_gen_pc Model (generative and discriminative PC...)")
     train_sv_gen_pc(
-        **get_model_config("sv_gen_pc"),
+        **get_model_config("sv_gen_pc", dataset_type, shared_hyperparams),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
         writter=writter
     )
 
     print("Training DPC Model (discriminative PC...)")
     train_DPC(
-        **get_model_config("DPC"),
+        **get_model_config("DPC", dataset_type, shared_hyperparams),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
         writer=writter
     )
 
     print("Training muPC Model (multi-scale PC...)")
     train_muPC(
-        **get_model_config("muPC"),
+        **get_model_config("muPC", dataset_type, shared_hyperparams),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
         writer=writter
     )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Train Predictive Coding Variants")
-    parser.add_argument('--dataset', type=str, default='MNIST', help='Dataset to use (default: MNIST)')
+    parser.add_argument('--dataset', type=str, default='MNIST', 
+                       help='Dataset to use (default: MNIST)')
+    parser.add_argument('--width', type=int, default=None,
+                       help='Shared network width for all models')
+    parser.add_argument('--depth', type=int, default=None,
+                       help='Shared network depth for all models')
+    parser.add_argument('--n_train_iters', type=int, default=None,
+                       help='Shared number of training iterations for all models')
+    parser.add_argument('--test_every', type=int, default=None,
+                       help='Shared test frequency for all models')
+    parser.add_argument('--seed', type=int, default=None,
+                       help='Shared random seed for all models')
+    
     args = parser.parse_args()
-    run_pipeline(dataset_type=args.dataset)
+    
+    # Build shared hyperparameters dictionary from command line args
+    shared_params = {}
+    for param in ['width', 'depth', 'n_train_iters', 'test_every', 'seed']:
+        value = getattr(args, param)
+        if value is not None:
+            shared_params[param] = value
+    
+    # Print configuration
+    print(f"Running pipeline with dataset: {args.dataset}")
+    if shared_params:
+        print(f"Shared hyperparameters: {shared_params}")
+    
+    run_pipeline(dataset_type=args.dataset, shared_hyperparams=shared_params)
+
+
+# # Example of how to use with custom shared parameters programmatically
+# def example_custom_training():
+#     """Example showing how to customize shared hyperparameters programmatically."""
+#     # Custom shared hyperparameters
+#     custom_shared = {
+#         'width': 512,      # Wider networks
+#         'depth': 4,        # Deeper networks
+#         'n_train_iters': 500,  # More training
+#         'seed': 42         # Reproducible results
+#     }
+    
+#     print("Running custom training with shared hyperparameters:")
+#     print(f"Shared params: {custom_shared}")
+    
+#     # Run with custom shared parameters
+#     run_pipeline(dataset_type="MNIST", shared_hyperparams=custom_shared)
 
 if __name__ == "__main__":
     main()

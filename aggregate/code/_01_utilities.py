@@ -102,18 +102,55 @@ def get_cifar10_loaders(batch_size):
     )
     return train_loader, test_loader
 
-def plot_mnist_imgs(imgs, labels, n_imgs=16):
-
+def plot_imgs(imgs, labels, n_imgs=16, dataset_type="MNIST"):
+    """Plot images from different datasets."""
     rows = np.sqrt(n_imgs).astype(int)
     cols = int(np.ceil(n_imgs / rows))
 
     fig, axs = plt.subplots(rows, cols, figsize=(cols * 2, rows * 2))
     axs = axs.flatten()
+    
     for i in range(n_imgs):
         ax = axs[i]
         ax.set_xticks([])
         ax.set_yticks([])
         ax.grid(False)
-        ax.imshow(imgs[i].reshape(28, 28), cmap=plt.cm.binary_r)
+        
+        if dataset_type == "MNIST":
+            # MNIST: 784 -> 28x28, grayscale
+            ax.imshow(imgs[i].reshape(28, 28), cmap=plt.cm.binary_r)
+        elif dataset_type == "CIFAR10":
+            # CIFAR10: 3072 -> 32x32x3, color
+            # Reshape and handle color channels
+            img = imgs[i].reshape(32, 32, 3)
+            # Clip values to valid range and convert to uint8 for display
+            img = np.clip(img, 0, 1)
+            ax.imshow(img)
+        else:
+            # Fallback: try to detect format based on size
+            if imgs[i].shape[0] == 784:
+                ax.imshow(imgs[i].reshape(28, 28), cmap=plt.cm.binary_r)
+            elif imgs[i].shape[0] == 3072:
+                img = imgs[i].reshape(32, 32, 3)
+                img = np.clip(img, 0, 1)
+                ax.imshow(img)
+            else:
+                # Can't determine format, skip plotting
+                ax.text(0.5, 0.5, 'Unknown\nformat', ha='center', va='center', 
+                       transform=ax.transAxes)
+        
         ax.set_xlabel(jnp.argmax(labels, axis=1)[i])
     return fig
+
+
+def plot_mnist_imgs(imgs, labels, n_imgs=16):
+    """Legacy function for backward compatibility - auto-detects dataset format."""
+    # Auto-detect dataset type based on image dimensions
+    if imgs[0].shape[0] == 784:
+        dataset_type = "MNIST"
+    elif imgs[0].shape[0] == 3072:
+        dataset_type = "CIFAR10"
+    else:
+        dataset_type = "auto"  # Let plot_imgs handle unknown formats
+    
+    return plot_imgs(imgs, labels, n_imgs, dataset_type=dataset_type)

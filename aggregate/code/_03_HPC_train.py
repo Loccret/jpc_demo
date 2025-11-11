@@ -63,6 +63,8 @@ def train_HPC(
     max_t1,
     test_every,
     n_train_iters,
+    train_loader,
+    test_loader,
     writter = None
 ):
     key = jax.random.PRNGKey(seed)
@@ -97,7 +99,7 @@ def train_HPC(
     amort_opt_state = amort_optim.init(eqx.filter(amortiser, eqx.is_array))
     opt_states = [gen_opt_state, amort_opt_state]
 
-    train_loader, test_loader = get_mnist_loaders(batch_size)
+    # Use the provided data loaders instead of hard-coded MNIST loaders
     for iter, (img_batch, label_batch) in tqdm(enumerate(train_loader), total=len(train_loader)):
         img_batch, label_batch = img_batch.numpy(), label_batch.numpy()
 

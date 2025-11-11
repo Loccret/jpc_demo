@@ -48,6 +48,8 @@ def train_DPC(
     batch_size,
     test_every,
     n_train_iters,
+    train_loader,
+    test_loader,
     writer = None,
     #   log_every = 10,
     #   save_gradients = True
@@ -67,7 +69,7 @@ def train_DPC(
     opt_state = optim.init(
         (eqx.filter(model, eqx.is_array), None)
     )
-    train_loader, test_loader = get_mnist_loaders(batch_size)
+    # Use the provided data loaders instead of hard-coded MNIST loaders
 
 
     CALCULATE_ACCURACY = True
