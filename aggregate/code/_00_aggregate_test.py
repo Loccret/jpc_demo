@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 from tqdm import tqdm
-from _01_utilities import get_mnist_loaders
+from _01_utilities import get_mnist_loaders, get_cifar10_loaders
 from _02_BiPC_train import train_BiPC
 from _03_HPC_train import train_HPC
 from _04_DPC_train import train_DPC
@@ -30,6 +30,9 @@ def get_dataset_config(dataset_type: str) -> Dict:
     configs = {
         "MNIST": {
             'batch_size': 64
+        },
+        "CIFAR10": {
+            'batch_size': 64
         }
     }
     if dataset_type in configs:
@@ -43,10 +46,14 @@ def load_dataset(dataset_type: str) -> Tuple[DataLoader, DataLoader]:
         return get_mnist_loaders(
             **get_dataset_config(dataset_type)
         )
+    elif dataset_type == "CIFAR10":
+        return get_cifar10_loaders(
+            **get_dataset_config(dataset_type)
+        )
     else:
         raise ValueError(f"Unsupported dataset type: {dataset_type}")
 
-def get_model_config(dataset_type: str) -> Dict:
+def get_model_config(model_type: str) -> Dict:
     configs = {
         "BiPC": {
             'seed': 0,
@@ -110,11 +117,11 @@ def get_model_config(dataset_type: str) -> Dict:
             'n_train_iters': 200
         }
     }
-    if dataset_type in configs:
-        return configs[dataset_type]
+    if model_type in configs:
+        return configs[model_type]
     else:
-        raise ValueError(f"Unsupported dataset type: {dataset_type}")
-    
+        raise ValueError(f"Unsupported model type: {model_type}")
+
 
 def create_writer(log_dir):
     if type(log_dir) is str:
@@ -129,19 +136,19 @@ def create_writer(log_dir):
 
 def run_pipeline(dataset_type: str):
     writter = create_writer(log_dir=f'logs/{dataset_type}')
-    # print("Training BiPC Model (generative PC...)")
-    # train_BiPC(
-    #     **get_model_config("BiPC"),
-    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
-    #     writter=writter
-    # )
+    print("Training BiPC Model (generative PC...)")
+    train_BiPC(
+        **get_model_config("BiPC"),
+        batch_size=get_dataset_config(dataset_type)['batch_size'],
+        writter=writter
+    )
 
-    # print("Training HPC Model (generative PC...)")
-    # train_HPC(
-    #     **get_model_config("HPC"),
-    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
-    #     writter=writter
-    # )
+    print("Training HPC Model (generative PC...)")
+    train_HPC(
+        **get_model_config("HPC"),
+        batch_size=get_dataset_config(dataset_type)['batch_size'],
+        writter=writter
+    )
 
     print("Training sv_gen_pc Model (generative and discriminative PC...)")
     train_sv_gen_pc(
@@ -150,19 +157,19 @@ def run_pipeline(dataset_type: str):
         writter=writter
     )
 
-    # print("Training DPC Model (discriminative PC...)")
-    # train_DPC(
-    #     **get_model_config("DPC"),
-    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
-    #     writer=writter
-    # )
+    print("Training DPC Model (discriminative PC...)")
+    train_DPC(
+        **get_model_config("DPC"),
+        batch_size=get_dataset_config(dataset_type)['batch_size'],
+        writer=writter
+    )
 
-    # print("Training muPC Model (multi-scale PC...)")
-    # train_muPC(
-    #     **get_model_config("muPC"),
-    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
-    #     writer=writter
-    # )
+    print("Training muPC Model (multi-scale PC...)")
+    train_muPC(
+        **get_model_config("muPC"),
+        batch_size=get_dataset_config(dataset_type)['batch_size'],
+        writer=writter
+    )
 
 
 def main():
