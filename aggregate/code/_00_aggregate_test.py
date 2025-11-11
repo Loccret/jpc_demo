@@ -202,7 +202,7 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
         writer=writter
     )
 
-    print("Training muPC Model (multi-scale PC...)")
+    print("Training muPC Model")
     train_muPC(
         **get_model_config("muPC", dataset_type, shared_hyperparams),
         batch_size=get_dataset_config(dataset_type)['batch_size'],
