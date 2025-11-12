@@ -51,6 +51,7 @@ def train_sv_gen_pc(
     n_train_iters,
     train_loader,
     test_loader,
+    max_steps=16384,
     writter = None
 ):
     key = jax.random.PRNGKey(seed)
@@ -80,7 +81,8 @@ def train_sv_gen_pc(
             opt_state=opt_state,
             input=label_batch,
             output=img_batch,
-            max_t1=max_t1
+            max_t1=max_t1,
+            max_steps=max_steps
         )
         network, opt_state = result["model"], result["opt_state"]
         train_loss = result["loss"]

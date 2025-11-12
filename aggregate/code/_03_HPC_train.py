@@ -65,6 +65,7 @@ def train_HPC(
     n_train_iters,
     train_loader,
     test_loader,
+    max_steps=16384,
     writter = None
 ):
     key = jax.random.PRNGKey(seed)
@@ -110,7 +111,8 @@ def train_HPC(
             opt_states=opt_states,
             input=label_batch,
             output=img_batch,
-            max_t1=max_t1
+            max_t1=max_t1,
+            max_steps=max_steps
         )
         generator, amortiser = result["generator"], result["amortiser"]
         gen_loss, amort_loss = result["losses"]

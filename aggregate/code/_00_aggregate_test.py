@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, transforms
 from tqdm import tqdm
-from _01_utilities import get_mnist_loaders, get_cifar10_loaders
+from _01_utilities import get_mnist_loaders, get_cifar10_loaders, get_speechcommands_loaders
 from _02_BiPC_train import train_BiPC
 from _03_HPC_train import train_HPC
 from _04_DPC_train import train_DPC
@@ -33,6 +33,9 @@ def get_dataset_config(dataset_type: str) -> Dict:
         },
         "CIFAR10": {
             'batch_size': 64
+        },
+        "SPEECHCOMMANDS": {
+            'batch_size': 32  # Smaller batch size for audio data
         }
     }
     if dataset_type in configs:
@@ -50,6 +53,10 @@ def load_dataset(dataset_type: str) -> Tuple[DataLoader, DataLoader]:
         return get_cifar10_loaders(
             **get_dataset_config(dataset_type)
         )
+    elif dataset_type == "SPEECHCOMMANDS":
+        return get_speechcommands_loaders(
+            **get_dataset_config(dataset_type)
+        )
     else:
         raise ValueError(f"Unsupported dataset type: {dataset_type}")
 
@@ -57,7 +64,8 @@ def get_data_dimensions(dataset_type: str) -> Tuple[int, int]:
     """Get input and output dimensions based on dataset type."""
     data_dims = {
         "MNIST": (784, 10),  # 28*28 flattened input, 10 classes
-        "CIFAR10": (3072, 10)  # 32*32*3 flattened input, 10 classes
+        "CIFAR10": (3072, 10),  # 32*32*3 flattened input, 10 classes  
+        "SPEECHCOMMANDS": (16000, 12)  # 16000 audio samples, 12 speech command classes
     }
     if dataset_type not in data_dims:
         raise ValueError(f"Unsupported dataset type: {dataset_type}")
@@ -71,7 +79,7 @@ def get_model_config(model_type: str, dataset_type: str = "MNIST",
     
     Args:
         model_type: Type of model ("BiPC", "HPC", "DPC", "muPC", "sv_gen_pc")
-        dataset_type: Type of dataset ("MNIST", "CIFAR10") 
+        dataset_type: Type of dataset ("MNIST", "CIFAR10", "SPEECHCOMMANDS") 
         shared_params: Dictionary of shared hyperparameters to override defaults
     """
     data_dim, label_dim = get_data_dimensions(dataset_type)
@@ -90,6 +98,14 @@ def get_model_config(model_type: str, dataset_type: str = "MNIST",
     if shared_params:
         default_shared.update(shared_params)
     
+    # Scale solver parameters based on dataset size for continuous-time models
+    # Larger datasets need more solver steps and longer integration times
+    # MNIST: 784 dims → scale=1.0, CIFAR10: 3072 dims → scale=3.9, SPEECHCOMMANDS: 16000 dims → scale=20.4
+    solver_scale = max(1.0, data_dim / 784)
+    
+    # Calculate max_steps for solver - larger datasets need more steps
+    default_max_steps = int(16384 * solver_scale)  # Scale from default 16384
+    
     # Model-specific configurations
     model_specifics = {
         "BiPC": {
@@ -103,7 +119,8 @@ def get_model_config(model_type: str, dataset_type: str = "MNIST",
             'input_dim': label_dim,  # latent dimension for generative model
             'output_dim': data_dim,  # generate data
             'lr': 1e-3,
-            'max_t1': 50,
+            'max_t1': int(50 * solver_scale),  # Scale integration time with data size
+            'max_steps': default_max_steps,  # Scale max solver steps with data size
             'test_every': 1000,
         },
         "DPC": {
@@ -127,7 +144,8 @@ def get_model_config(model_type: str, dataset_type: str = "MNIST",
             'input_dim': label_dim,  # latent dimension for generative model
             'output_dim': data_dim,  # generate data
             'lr': 1e-3,
-            'max_t1': 100,
+            'max_t1': int(100 * solver_scale),  # Scale integration time with data size
+            'max_steps': default_max_steps,  # Scale max solver steps with data size
             'n_train_iters': 200,  # fewer training iterations
         }
     }
@@ -138,6 +156,13 @@ def get_model_config(model_type: str, dataset_type: str = "MNIST",
     # Combine shared and model-specific parameters
     config = default_shared.copy()
     config.update(model_specifics[model_type])
+    
+    # Log solver scaling for continuous-time models
+    if model_type in ["HPC", "sv_gen_pc"]:
+        if "max_t1" in config and "max_steps" in config:
+            print(f"  {model_type} max_t1: {config['max_t1']}, max_steps: {config['max_steps']} (solver_scale: {solver_scale:.2f})")
+        elif "max_t1" in config:
+            print(f"  {model_type} max_t1: {config['max_t1']} (solver_scale: {solver_scale:.2f})")
     
     return config
 
@@ -158,7 +183,7 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
     Run the complete training pipeline for all PC variants.
     
     Args:
-        dataset_type: Dataset to use ("MNIST", "CIFAR10")
+        dataset_type: Dataset to use ("MNIST", "CIFAR10", "SPEECHCOMMANDS")
         shared_hyperparams: Dictionary of shared hyperparameters to apply to all models
     """
     writter = create_writer(log_dir=f'logs/{dataset_type}')
@@ -166,23 +191,23 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
     # Get data loaders for the specified dataset
     train_loader, test_loader = load_dataset(dataset_type)
     
-    print("Training BiPC Model (generative PC...)")
-    train_BiPC(
-        **get_model_config("BiPC", dataset_type, shared_hyperparams),
-        batch_size=get_dataset_config(dataset_type)['batch_size'],
-        train_loader=train_loader,
-        test_loader=test_loader,
-        writter=writter
-    )
+    # print("Training BiPC Model (generative PC...)")
+    # train_BiPC(
+    #     **get_model_config("BiPC", dataset_type, shared_hyperparams),
+    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
+    #     train_loader=train_loader,
+    #     test_loader=test_loader,
+    #     writter=writter
+    # )
 
-    print("Training HPC Model (generative PC...)")
-    train_HPC(
-        **get_model_config("HPC", dataset_type, shared_hyperparams),
-        batch_size=get_dataset_config(dataset_type)['batch_size'],
-        train_loader=train_loader,
-        test_loader=test_loader,
-        writter=writter
-    )
+    # print("Training HPC Model (generative PC...)")
+    # train_HPC(
+    #     **get_model_config("HPC", dataset_type, shared_hyperparams),
+    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
+    #     train_loader=train_loader,
+    #     test_loader=test_loader,
+    #     writter=writter
+    # )
 
     print("Training sv_gen_pc Model (generative and discriminative PC...)")
     train_sv_gen_pc(
@@ -215,7 +240,7 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
 def main():
     parser = argparse.ArgumentParser(description="Train Predictive Coding Variants")
     parser.add_argument('--dataset', type=str, default='MNIST', 
-                       help='Dataset to use (default: MNIST)')
+                       help='Dataset to use: MNIST, CIFAR10, or SPEECHCOMMANDS (default: MNIST)')
     parser.add_argument('--width', type=int, default=None,
                        help='Shared network width for all models')
     parser.add_argument('--depth', type=int, default=None,
@@ -226,12 +251,16 @@ def main():
                        help='Shared test frequency for all models')
     parser.add_argument('--seed', type=int, default=None,
                        help='Shared random seed for all models')
+    parser.add_argument('--max_t1', type=int, default=None,
+                       help='Max integration time for continuous-time models (HPC, sv_gen_pc)')
+    parser.add_argument('--max_steps', type=int, default=None,
+                       help='Max solver steps for continuous-time models (HPC, sv_gen_pc)')
     
     args = parser.parse_args()
     
     # Build shared hyperparameters dictionary from command line args
     shared_params = {}
-    for param in ['width', 'depth', 'n_train_iters', 'test_every', 'seed']:
+    for param in ['width', 'depth', 'n_train_iters', 'test_every', 'seed', 'max_t1', 'max_steps']:
         value = getattr(args, param)
         if value is not None:
             shared_params[param] = value

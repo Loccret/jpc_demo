@@ -56,6 +56,7 @@ def make_pc_step(
       layer_sizes: Optional[PyTree[int]] = None,
       batch_size: Optional[int] = None,
       sigma: Scalar = 0.05,
+      max_steps: int = 16384,
       record_activities: bool = False,
       record_energies: bool = False,
       record_every: int = None,
@@ -178,7 +179,8 @@ def make_pc_step(
         spectral_penalty=spectral_penalty,
         activity_decay=activity_decay,
         record_iters=record_activities,
-        record_every=record_every
+        record_every=record_every,
+        max_steps=max_steps
     )
     t_max = get_t_max(equilib_activities) if record_activities else 0
     activity_norms = (compute_activity_norms(
@@ -284,6 +286,7 @@ def make_hpc_step(
       stepsize_controller: AbstractStepSizeController = PIDController(
           rtol=1e-3, atol=1e-3
       ),
+      max_steps: int = 16384,
       record_activities: bool = False,
       record_energies: bool = False
 ) -> Dict:
@@ -375,7 +378,8 @@ def make_hpc_step(
         max_t1=max_t1,
         dt=dt,
         stepsize_controller=stepsize_controller,
-        record_iters=record_activities
+        record_iters=record_activities,
+        max_steps=max_steps
     )
     t_max = get_t_max(equilib_activities) if record_activities else None
 

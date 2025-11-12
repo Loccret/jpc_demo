@@ -35,7 +35,8 @@ def solve_inference(
         spectral_penalty: Scalar = 0.,
         activity_decay: Scalar = 0.,
         record_iters: bool = False,
-        record_every: int = None
+        record_every: int = None,
+        max_steps: int = 16384
 ) -> PyTree[Array]:
     """Solves the inference (activity) dynamics of a predictive coding network.
 
@@ -85,6 +86,8 @@ def solve_inference(
     - `record_iters`: If `True`, returns all integration steps.
     - `record_every`: int determining the sampling frequency of the integration
         steps.
+    - `max_steps`: Maximum number of solver steps allowed (16384 by default). 
+        Increase this for high-dimensional problems that require more steps to converge.
 
     **Returns:**
 
@@ -117,7 +120,8 @@ def solve_inference(
         ),
         stepsize_controller=stepsize_controller,
         event=Event(steady_state_event_with_timeout),  # stop when returning from steady_state_event_with_timeout crosses zero
-        saveat=saveat
+        saveat=saveat,
+        max_steps=max_steps
     )
     return solution.ys
 
