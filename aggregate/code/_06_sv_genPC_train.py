@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from _01_utilities import get_mnist_loaders, plot_mnist_imgs
+from _01_utilities import get_mnist_loaders, plot_mnist_imgs, plot_imgs
 import warnings
 
 
@@ -52,7 +52,8 @@ def train_sv_gen_pc(
     train_loader,
     test_loader,
     max_steps=16384,
-    writter = None
+    writter = None,
+    dataset_type = "MNIST"
 ):
     key = jax.random.PRNGKey(seed)
     key, *subkeys = jax.random.split(key, 4)
@@ -102,7 +103,7 @@ def train_sv_gen_pc(
             if (iter+1) >= n_train_iters:
                 break
 
-    fig = plot_mnist_imgs(img_preds, label_batch)
+    fig = plot_imgs(img_preds, label_batch, dataset_type=dataset_type)
     # log to tensorboard
     if writter is not None:
         writter.add_scalar("SupervisedPC/test/accuracy", float(avg_test_acc), iter+1)

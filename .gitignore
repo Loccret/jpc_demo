@@ -18,3 +18,4 @@ venv*/
 
 /examples/runs/*
 /aggregate/code/logs/*
+logs/*

@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from _01_utilities import get_mnist_loaders, plot_mnist_imgs
+from _01_utilities import get_mnist_loaders, plot_mnist_imgs, plot_imgs
 import io
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -57,7 +57,8 @@ def train_BiPC(
       n_train_iters,
       train_loader,
       test_loader,
-      writter = None
+      writter = None,
+      dataset_type = "MNIST"
 ):
     key = jax.random.PRNGKey(seed)
     gen_key, amort_key = jax.random.split(key, 2)
@@ -155,7 +156,7 @@ def train_BiPC(
             if (iter+1) >= n_train_iters:
                 break
                 
-    fig = plot_mnist_imgs(img_preds, label_batch)
+    fig = plot_imgs(img_preds, label_batch, dataset_type = dataset_type)
     # log to tensorboard
     if writter is not None:
         writter.add_figure(

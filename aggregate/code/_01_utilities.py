@@ -211,12 +211,17 @@ def plot_imgs(imgs, labels, n_imgs=16, dataset_type="MNIST"):
             # MNIST: 784 -> 28x28, grayscale
             ax.imshow(imgs[i].reshape(28, 28), cmap=plt.cm.binary_r)
         elif dataset_type == "CIFAR10":
+            _mean = np.array([0.4914, 0.4822, 0.4465]).reshape(3, 1, 1)
+            _std = np.array([0.2023, 0.1994, 0.2010]).reshape(3, 1, 1)
+            img = imgs[i].reshape(3, 32, 32) * _std + _mean  # Unnormalize
             # CIFAR10: 3072 -> 32x32x3, color
             # Reshape and handle color channels
-            img = imgs[i].reshape(32, 32, 3)
+            # img = imgs[i].reshape(32, 32, 3)
+            img = img.transpose(1, 2, 0)  # Convert from CHW to HWC
             # Clip values to valid range and convert to uint8 for display
+            img = (img - img.min()) / (img.max() - img.min())  # Normalize to [0, 1]
             img = np.clip(img, 0, 1)
-            ax.imshow(img)
+            ax.imshow(np.asarray(img))
         elif dataset_type == "SPEECHCOMMANDS":
             # SPEECHCOMMANDS: 16000 -> 1D waveform, plot as time series
             ax.plot(imgs[i])

@@ -197,7 +197,8 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
     #     batch_size=get_dataset_config(dataset_type)['batch_size'],
     #     train_loader=train_loader,
     #     test_loader=test_loader,
-    #     writter=writter
+    #     writter=writter,
+    #     dataset_type=dataset_type
     # )
 
     # print("Training HPC Model (generative PC...)")
@@ -206,7 +207,8 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
     #     batch_size=get_dataset_config(dataset_type)['batch_size'],
     #     train_loader=train_loader,
     #     test_loader=test_loader,
-    #     writter=writter
+    #     writter=writter,
+    #     dataset_type=dataset_type
     # )
 
     print("Training sv_gen_pc Model (generative and discriminative PC...)")
@@ -215,7 +217,8 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
         batch_size=get_dataset_config(dataset_type)['batch_size'],
         train_loader=train_loader,
         test_loader=test_loader,
-        writter=writter
+        writter=writter,
+        dataset_type=dataset_type
     )
 
     print("Training DPC Model (discriminative PC...)")
@@ -239,7 +242,7 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
 
 def main():
     parser = argparse.ArgumentParser(description="Train Predictive Coding Variants")
-    parser.add_argument('--dataset', type=str, default='MNIST', 
+    parser.add_argument('--dataset', type=str, default='CIFAR10', 
                        help='Dataset to use: MNIST, CIFAR10, or SPEECHCOMMANDS (default: MNIST)')
     parser.add_argument('--width', type=int, default=None,
                        help='Shared network width for all models')
