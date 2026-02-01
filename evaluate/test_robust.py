@@ -44,7 +44,7 @@ standard_robust_params = {
     'loader': test_mnist_loader,
     'model': mupc,
     'key': jax.random.PRNGKey(0),
-    'lr': ACTIVITY_LR,
+    'lr': 1e-1,
     'record_history': False,
     'ener_fn': mse_energy,
     'loss_fn': mse_energy,
@@ -52,16 +52,16 @@ standard_robust_params = {
     'sigma': 0.0,
     'RANDOM_FACTOR': 0.5,
     'act_amp': [1.0 for _ in range(len(mupc))],
-    'temp_inference_step': 1000,
+    'temp_inference_step': 1,
     'last_inference_step': 100,
     'INFERENCE_ROUNDS': 1,
     'writter': None,
-    'noise_inference_scale': 2000.0
+    'noise_inference_scale': 0.0
 }
 
 acc_by_act = {idx:[] for idx, _ in enumerate(mupc[:-1])}
 
-for main_class in tqdm(range(10)):
+for main_class in tqdm(range(1)):
     standard_robust_params['main_cls'] = main_class
     final_acts, new_labels = original_robust_inference_test(**standard_robust_params)
     for idx, _ in enumerate(final_acts[:-1]):

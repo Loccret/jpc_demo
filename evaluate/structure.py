@@ -47,7 +47,7 @@ class ScaledLinear(eqx.Module):
         self.linear = linear
         self.scaling = scaling
 
-    def __call__(self, x):
+    def __call__(self, x, *, key=None, inference=False):
         return self.scaling * self.linear(x)
         
 
@@ -78,10 +78,10 @@ class ResNetBlock(eqx.Module):
         )
     # print("skip link is banned")
     print("skip link is activated")
-    def __call__(self, x):
+    def __call__(self, x, *, key=None, inference=False):
         res_path = x
         x = self.act_fn(x)
-        return self.scaled_linear(x) + res_path
+        return self.scaled_linear(x, key=key, inference=inference) + res_path
 
 
 class Readout(eqx.Module):
@@ -110,9 +110,9 @@ class Readout(eqx.Module):
             use_bias=use_bias
         )
 
-    def __call__(self, x):
+    def __call__(self, x, *, key=None, inference=False):
         x = self.act_fn(x)
-        return self.scaled_linear(x)
+        return self.scaled_linear(x, key=key, inference=inference)
 
 
 class FCResNet(eqx.Module):
