@@ -191,25 +191,25 @@ def run_pipeline(dataset_type: str, shared_hyperparams: Dict = None):
     # Get data loaders for the specified dataset
     train_loader, test_loader = load_dataset(dataset_type)
     
-    # print("Training BiPC Model (generative PC...)")
-    # train_BiPC(
-    #     **get_model_config("BiPC", dataset_type, shared_hyperparams),
-    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
-    #     train_loader=train_loader,
-    #     test_loader=test_loader,
-    #     writter=writter,
-    #     dataset_type=dataset_type
-    # )
+    print("Training BiPC Model (generative PC...)")
+    train_BiPC(
+        **get_model_config("BiPC", dataset_type, shared_hyperparams),
+        batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
+        writter=writter,
+        dataset_type=dataset_type
+    )
 
-    # print("Training HPC Model (generative PC...)")
-    # train_HPC(
-    #     **get_model_config("HPC", dataset_type, shared_hyperparams),
-    #     batch_size=get_dataset_config(dataset_type)['batch_size'],
-    #     train_loader=train_loader,
-    #     test_loader=test_loader,
-    #     writter=writter,
-    #     dataset_type=dataset_type
-    # )
+    print("Training HPC Model (generative PC...)")
+    train_HPC(
+        **get_model_config("HPC", dataset_type, shared_hyperparams),
+        batch_size=get_dataset_config(dataset_type)['batch_size'],
+        train_loader=train_loader,
+        test_loader=test_loader,
+        writter=writter,
+        dataset_type=dataset_type
+    )
 
     print("Training sv_gen_pc Model (generative and discriminative PC...)")
     train_sv_gen_pc(
