@@ -4,8 +4,65 @@ import jax
 import jax.numpy as jnp
 import equinox as eqx
 import optax
-from core import (compute_ce_loss, init_activities_from_normal_ffwd, forward_and_extract_activities, compute_energy, perform_inference, validate, make_modern_mlp, mse_energy)
+from core import (compute_ce_loss, init_activities_from_normal_ffwd, forward_and_extract_activities, compute_energy, validate, make_modern_mlp, mse_energy)
 from data_creator import get_mnist_loaders
+from jpc_func import update_activities
+
+
+def perform_inference_with_update_activities(
+    model: List[Callable], 
+    activations: List[Array], 
+    key: PRNGKeyArray, 
+    yy: ArrayLike, 
+    xx: ArrayLike = None, 
+    num_iters: int = 10, 
+    lr: float = 0.05, 
+    record_history: bool = False, 
+    ener_fn: Callable = mse_energy, 
+    loss_fn: Callable = mse_energy, 
+    inference: bool = True
+) -> Tuple[List[Array], Optional[Array]]:
+    """
+    Perform inference using direct gradient descent with JAX loops for GPU acceleration.
+    """
+    def energy_fn(acts):
+        return sum(compute_energy(model, acts, key, yy, xx, ener_fn=ener_fn, loss_fn=loss_fn, inference=inference))
+    
+    @eqx.filter_jit
+    def inference_step(acts):
+        new_energy, grads = jax.value_and_grad(energy_fn)(acts)
+        return jax.tree.map(lambda a, g: a - lr * g, acts, grads)
+    
+    if record_history:
+        num_layers = len(model)
+        energy_history = jnp.zeros((num_iters + 1, num_layers))
+        
+        # Store initial energies
+        initial_energies = jnp.array(compute_energy(model, activations, key, yy, xx, ener_fn=ener_fn, loss_fn=loss_fn, inference=inference))
+        energy_history = energy_history.at[0].set(initial_energies)
+        
+        # Use JAX loop for GPU acceleration
+        def body_fn_with_history(i, state):
+            acts, e_hist = state
+            new_acts = inference_step(acts)
+            new_energies = jnp.array(compute_energy(model, new_acts, key, yy, xx, ener_fn=ener_fn, loss_fn=loss_fn, inference=inference))
+            new_e_hist = e_hist.at[i + 1].set(new_energies)
+            return new_acts, new_e_hist
+        
+        activations, energy_history = jax.lax.fori_loop(
+            0, num_iters, body_fn_with_history, (activations, energy_history)
+        )
+        
+        return activations, energy_history
+    else:
+        # Fast version with JAX loop for GPU acceleration
+        def body_fn(i, acts):
+            return inference_step(acts)
+        
+        activations = jax.lax.fori_loop(0, num_iters, body_fn, activations)
+        
+        return activations, None
+
 
 def _prepare_data_for_robust_test(loader, main_cls: int, num_samples: int = 100, key = None):
     """Extract and organize data by class. This runs outside of JIT."""
@@ -90,14 +147,14 @@ def _jitted_robust_inference_core(
     
     for _ in range(INFERENCE_ROUNDS):
         for cls_idx in range(num_other_classes):
-            activations, _ = perform_inference(
+            activations, _ = perform_inference_with_update_activities(
                 model, activations, key, yy=None, xx=other_cls_imgs[cls_idx], 
                 num_iters=temp_inference_step, lr=noise_inference_scale * lr, record_history=False, 
                 ener_fn=ener_fn, loss_fn=loss_fn, inference=inference
             )
     
     # Final inference on main class
-    final_act, energy_history = perform_inference(
+    final_act, energy_history = perform_inference_with_update_activities(
         model, activations, key, yy=None, xx=fin_imgs, 
         num_iters=last_inference_step, lr=1 * lr, record_history=record_history, 
         ener_fn=ener_fn, loss_fn=loss_fn, inference=inference

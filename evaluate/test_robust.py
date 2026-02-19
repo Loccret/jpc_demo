@@ -8,6 +8,10 @@ from core import mse_energy
 from data_creator import get_mnist_loaders
 import numpy as np
 
+# Check GPU availability
+print(f"JAX devices: {jax.devices()}")
+print(f"Default backend: {jax.default_backend()}")
+
 SEED = 4329
 
 key = jax.random.PRNGKey(SEED)
@@ -44,7 +48,7 @@ standard_robust_params = {
     'loader': test_mnist_loader,
     'model': mupc,
     'key': jax.random.PRNGKey(0),
-    'lr': 1e-1,
+    'lr': ACTIVITY_LR,
     'record_history': False,
     'ener_fn': mse_energy,
     'loss_fn': mse_energy,
