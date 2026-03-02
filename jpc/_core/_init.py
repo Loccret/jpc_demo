@@ -4,7 +4,7 @@ from jax import vmap, random
 import equinox as eqx
 from ._energies import _get_param_scalings
 from jaxtyping import PyTree, ArrayLike, Array, PRNGKeyArray, Scalar
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 from ._errors import _check_param_type
 
 
@@ -116,26 +116,6 @@ def init_activities_from_normal(
         )
     return activities
 
-
-def init_activities_as_ffwd_plus_noise_real(key: PRNGKeyArray, model: List[eqx.Module], xx: ArrayLike, sigma: Scalar = 0.05, inference: bool = True, include_input: bool = True, random_factor: float = 1.0)-> List[Array]:
-    """
-        add Gaussian noise to forward pass activations and scale it's radius
-    """
-    
-    key, forward_key = jax.random.split(key)
-    activations = forward_and_extract_activities(model, xx, key = forward_key, inference=inference)
-
-    random_keys = jax.random.split(key, len(activations))
-    random_activities = []
-    for act, rand_key in zip(activations, random_keys):
-        ran_real = random_factor * sigma * jax.random.normal(rand_key, shape=act.shape) + (1 - random_factor) * act
-        ran_act = ran_real
-        radii = jnp.linalg.norm(act, axis=-1, keepdims=True)
-        ran_act = ran_act / (jnp.linalg.norm(ran_act, axis=-1, keepdims=True) + 1e-12) * radii
-        random_activities.append(ran_act)
-    if include_input:
-        random_activities.insert(0, xx)
-    return random_activities
 
 def init_activities_with_amort(
         amortiser: PyTree[Callable],

@@ -1,6 +1,6 @@
 import os
 from jaxtyping import PRNGKeyArray, PyTree, ArrayLike, Scalar, Array
-from types import List, Tuple, Optional
+from typing import Any, Callable, List, Optional, Tuple, Dict, Literal
 import jax
 import jax.random as jr
 import jax.numpy as jnp
@@ -140,8 +140,10 @@ def train_mlp(
                 skip_model=skip_model,
                 param_type=param_type
             )
+
+            key, noise_key = jax.random.split(key)
             activities = add_noise_to_activities(
-                key=keys[2],
+                key=noise_key,
                 acts=activities,
                 sigma=0.05,
                 include_input=False,
@@ -191,6 +193,10 @@ def train_mlp(
             param_type=param_type
         )
         print(f"Epoch {epoch} - Test Accuracy: {avg_test_acc:.4f}\n")
+    # save model
+    eqx.tree_serialise_leaves(os.path.join(save_dir, "final_model.eqx"), model)
+    if skip_model is not None:
+        eqx.tree_serialise_leaves(os.path.join(save_dir, "final_skip_model.eqx"), skip_model)
 
 
 if __name__ == "__main__":
@@ -214,8 +220,8 @@ if __name__ == "__main__":
     param_optim_id = "adam"
     param_lr = 1e-1
     batch_size = 128
-    # max_infer_iters = 128
-    max_infer_iters = 0
+    max_infer_iters = 128
+    # max_infer_iters = 0
     activity_optim_id = "gd"
     # activity_optim_id = "adam"
     activity_lr = 5e-1
