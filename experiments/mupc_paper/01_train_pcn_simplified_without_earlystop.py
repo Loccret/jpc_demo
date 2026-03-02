@@ -141,7 +141,6 @@ def train_mlp(
 
     train_num_energies = np.zeros((n_test_iters + 1, len(layer_idxs)))
 
-    has_diverged, no_learning = False, False
     global_batch_id = 0
     for epoch in range(1, max_epochs + 1):
         print(f"\nEpoch {epoch}\n-------------------------------")
@@ -200,8 +199,6 @@ def train_mlp(
                 activities = activity_update_result["activities"]
                 activity_opt_state = activity_update_result["opt_state"]
                 activity_grads = activity_update_result["grads"]
-                if rms_norm(activity_grads) < 1e-3 + 1e-3 * rms_norm(activity_grads):
-                    n_infer_iters[global_batch_id] = t            
                 
                 if global_batch_id == 0 or global_batch_id % test_every == 0:
                     num_energies = jpc.pc_energy_fn(
@@ -275,26 +272,6 @@ def train_mlp(
                 test_losses.append(avg_test_loss)
                 test_accs.append(avg_test_acc)
                 print(f"Avg test accuracy: {avg_test_acc:.4f}\n")
-
-            if np.isinf(train_loss) or np.isnan(train_loss):
-                has_diverged = True
-                break
-            
-            if global_batch_id >= test_every and avg_test_acc < 15:
-                no_learning = True
-                break
-        
-        if has_diverged:
-            print(
-                f"Stopping training because of diverging loss: {train_loss}"
-            )
-            break
-
-        if no_learning:
-            print(
-                f"Stopping training because of chance accuracy (no learning): {avg_test_acc}"
-            )
-            break
 
     plot_loss(
         loss=train_losses,
