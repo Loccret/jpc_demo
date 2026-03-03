@@ -8,6 +8,7 @@ from tqdm import tqdm
 import equinox as eqx
 import jpc
 import optax
+from jpc._core._energies import pc_energy_fn
 from experiments.datasets import get_dataloaders
 from experiments.mupc_paper.utils import (
     setup_experiment,
@@ -170,6 +171,18 @@ def train_mlp(
                 activities = activity_update_result["activities"]
                 activity_opt_state = activity_update_result["opt_state"]
 
+                step_energy = pc_energy_fn(
+                    params = (model, skip_model),
+                    activities = activities,
+                    y = label_batch,
+                    x = img_batch,
+                    param_type = param_type,
+                    weight_decay = weight_decay,
+                    spectral_penalty = spectral_penalty,
+                    activity_decay = activity_decay,
+                    record_history = True
+                )
+                energy_history.append(step_energy)
 
             # update parameters
             param_update_result = jpc.update_params(
@@ -198,6 +211,12 @@ def train_mlp(
         print(f"Epoch {epoch} - Test Accuracy: {avg_test_acc:.4f}\n")
 
 
+    # save energy history
+    try:
+        energy_history = jnp.array(energy_history)
+        jnp.save(os.path.join(save_dir, "energy_history.npy"), energy_history)
+    except Exception as e:
+        print(f"Error saving energy history: {e}")
     # save model
     if save_dir is not None:
         eqx.tree_serialise_leaves(os.path.join(save_dir, "final_model.eqx"), model)
