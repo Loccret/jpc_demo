@@ -8,6 +8,7 @@ from tqdm import tqdm
 import equinox as eqx
 import jpc
 import optax
+from datetime import datetime
 from jpc._core._energies import pc_energy_fn
 from experiments.datasets import get_dataloaders
 from experiments.mupc_paper.utils import (
@@ -15,6 +16,9 @@ from experiments.mupc_paper.utils import (
     set_seed,
     init_weights
 )
+
+
+timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
 
 def add_noise_to_activities(key: PRNGKeyArray, acts: List[Array], 
@@ -180,7 +184,7 @@ def train_mlp(
                     weight_decay = weight_decay,
                     spectral_penalty = spectral_penalty,
                     activity_decay = activity_decay,
-                    record_history = True
+                    record_layers = True
                 )
                 energy_history.append(step_energy)
 
@@ -214,7 +218,7 @@ def train_mlp(
     # save energy history
     try:
         energy_history = jnp.array(energy_history)
-        jnp.save(os.path.join(save_dir, "energy_history.npy"), energy_history)
+        jnp.save(f"energy_history_{timestamp}.npy", energy_history)
     except Exception as e:
         print(f"Error saving energy history: {e}")
     # save model
@@ -237,16 +241,16 @@ if __name__ == "__main__":
     loss_id = "mse"
     act_fn = "relu"
     width = 512
-    n_hidden = 128
+    n_hidden = 5
     use_skips = True
     weight_init = "standard_gauss"
-    param_type = "mupc"
-    # param_type = "sp"
+    # param_type = "mupc"
+    param_type = "sp"
     param_optim_id = "adam"
-    param_lr = 1e-1
+    param_lr = 1e-3
     batch_size = 128
-    # max_infer_iters = 128
-    max_infer_iters = 0
+    max_infer_iters = 20
+    # max_infer_iters = 0
     activity_optim_id = "gd"
     # activity_optim_id = "adam"
     activity_lr = 5e-1

@@ -22,3 +22,5 @@ logs/*
 
 *.eqx
 *.db
+experiments/mupc_paper/05_another_mlp.py
+experiments/mupc_paper/core.py
